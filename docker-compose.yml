@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: daocloud.io/library/mysql:5.7.7
+    container_name: mysql
+    hostname: "mysql"
+    ports:
+      - 3307:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: digov@2019
+    volumes:
+      - /Users/zhangjiajun/devTools/mysql/data:/var/lib/mysql
+      # - /path/to/my.cnf:/etc/mysql/my.cnf
+    restart: always
+#     networks:
+#       - digov_net
+# networks:
+#   digov_net:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.30.0.0/16
