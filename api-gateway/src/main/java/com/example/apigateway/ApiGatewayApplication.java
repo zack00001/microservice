@@ -19,8 +19,8 @@ public class ApiGatewayApplication {
 //		System.out.println("Received notification for order - " + orderPlacedEvent.getOrderNumber());
 //	}
 
-	@KafkaListener(topics = "notificationTopicString")
-	public void handleNotification(OrderPlacedEvent orderPlacedEvent) {
-		System.out.println("Received notification for order - " + orderPlacedEvent.getOrderNumber());
-	}
+//	@KafkaListener(topics = "notificationTopicString")
+//	public void handleNotification(OrderPlacedEvent orderPlacedEvent) {
+//		System.out.println("Received notification for order - " + orderPlacedEvent.getOrderNumber());
+//	}
 }

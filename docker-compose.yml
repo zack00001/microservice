@@ -1,21 +1,169 @@
 services:
-  mysql:
-    image: daocloud.io/library/mysql:5.7.7
-    container_name: mysql
-    hostname: "mysql"
+#  inventory-mysql:
+#    image: daocloud.io/library/mysql:5.7.7
+#    container_name: inventory-mysql
+#    hostname: "mysql"
+#    expose:
+#      - 3306
+#    environment:
+#      MYSQL_ROOT_PASSWORD: digov@2019
+#    volumes:
+#      - /Users/zhangjiajun/devTools/mysql/data-inventory:/var/lib/mysql
+#      # - /path/to/my.cnf:/etc/mysql/my.cnf
+#    restart: unless-stopped
+#    networks:
+#      - digov_net
+#    
+#  order-mysql:
+#    image: daocloud.io/library/mysql:5.7.7
+#    container_name: order-mysql
+#    hostname: "mysql"
+#    expose:
+#      - 3306
+#    environment:
+#      MYSQL_ROOT_PASSWORD: digov@2019
+#    volumes:
+#      - /Users/zhangjiajun/devTools/mysql/data-order:/var/lib/mysql
+#      # - /path/to/my.cnf:/etc/mysql/my.cnf
+#    restart: unless-stopped
+#    networks:
+#      - digov_net
+    
+  mongo:
+      image: mongo:latest
+      container_name: mongo
+      ports:
+        - 27017:27017
+      volumes:
+      - /Users/zhangjiajun/devTools/mongo/data-mongo:/data/db
+      restart: unless-stopped
+      networks:
+        - digov_net
+      
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
     ports:
-      - 3307:3306
+      - "2181:2181"
     environment:
-      MYSQL_ROOT_PASSWORD: digov@2019
-    volumes:
-      - /Users/zhangjiajun/devTools/mysql/data:/var/lib/mysql
-      # - /path/to/my.cnf:/etc/mysql/my.cnf
-    restart: always
-#     networks:
-#       - digov_net
-# networks:
-#   digov_net:
-#     driver: bridge
-#     ipam:
-#       config:
-#         - subnet: 172.30.0.0/16
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - digov_net
+
+  broker:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: broker
+    expose:
+      - 9092
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - digov_net
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - 9411:9411
+    networks:
+      - digov_net
+
+  discovery-server:
+    image: jason329/discovery-server:latest
+    container_name: discovery-server
+    pull_policy: always
+    expose:
+      - 8761
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - zipkin
+    networks:
+      - digov_net
+
+  api-gateway:
+    image: jason329/api-gateway:latest
+    container_name: api-gateway
+    pull_policy: always
+    ports:
+      - 8881:8881
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - zipkin
+      - discovery-server
+    networks:
+      - digov_net
+
+#  config-server:
+#    image: jason329/config-server:latest
+#    container_name: config-server
+#    pull_policy: always
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    restart: unless-stopped
+#    depends_on:
+#      - zipkin
+#      - discovery-server
+#    networks:
+#      - digov_net
+
+#  order-service:
+#    image: jason329/order-service:latest
+#    container_name: order-service
+#    pull_policy: always
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    depends_on:
+#      - zipkin
+#      - discovery-server
+#      - order-mysql
+#      - api-gateway
+#      - broker
+#    networks:
+#      - digov_net
+#
+#  inventory-service:
+#    image: jason329/inventory-service:latest
+#    container_name: inventory-service
+#    pull_policy: always
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    depends_on:
+#      - zipkin
+#      - discovery-server
+#      - inventory-mysql
+#      - api-gateway
+#      - broker
+#    networks:
+#      - digov_net
+
+  product-service:
+    image: jason329/product-service:latest
+    container_name: product-service
+    pull_policy: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - zipkin
+      - discovery-server
+      - mongo
+      - api-gateway
+    networks:
+      - digov_net
+  
+networks:
+  digov_net:
+    driver: bridge
+#    ipam:
+#      config:
+#        - subnet: 172.30.0.0/16
